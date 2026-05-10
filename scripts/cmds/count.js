@@ -1,165 +1,160 @@
+const axios = require("axios");
+const fs = require("fs-extra");
+
 module.exports = {
-	config: {
-		name: "count",
-		version: "1.3",
-		author: "NTKhang",
-		countDown: 5,
-		role: 0,
-		description: {
-			vi: "Xem số lượng tin nhắn của tất cả thành viên hoặc bản thân (tính từ lúc bot vào nhóm)",
-			en: "View the number of messages of all members or yourself (since the bot joined the group)"
-		},
-		category: "box chat",
-		guide: {
-			vi: "   {pn}: dùng để xem số lượng tin nhắn của bạn"
-				+ "\n   {pn} @tag: dùng để xem số lượng tin nhắn của những người được tag"
-				+ "\n   {pn} all: dùng để xem số lượng tin nhắn của tất cả thành viên",
-			en: "   {pn}: used to view the number of messages of you"
-				+ "\n   {pn} @tag: used to view the number of messages of those tagged"
-				+ "\n   {pn} all: used to view the number of messages of all members"
-		}
-	},
+    config: {
+        name: "count",
+        version: "4.1.0",
+        author: "Hasan x Mr.King", // ✅ author update
+        countDown: 5,
+        role: 0,
+        aliases: ["c"],
+        category: "box chat",
+        shortDescription: "Message count system with ranking",
+        longDescription: "Track message count, leaderboard & auto remove low active users"
+    },
 
-	langs: {
-		vi: {
-			count: "Số tin nhắn của các thành viên:",
-			endMessage: "Những người không có tên trong danh sách là chưa gửi tin nhắn nào.",
-			page: "Trang [%1/%2]",
-			reply: "Phản hồi tin nhắn này kèm số trang để xem tiếp",
-			result: "%1 hạng %2 với %3 tin nhắn",
-			yourResult: "Bạn đứng hạng %1 và đã gửi %2 tin nhắn trong nhóm này",
-			invalidPage: "Số trang không hợp lệ"
-		},
-		en: {
-			count: "Number of messages of members:",
-			endMessage: "Those who do not have a name in the list have not sent any messages.",
-			page: "Page [%1/%2]",
-			reply: "Reply to this message with the page number to view more",
-			result: "%1 rank %2 with %3 messages",
-			yourResult: "You are ranked %1 and have sent %2 messages in this group",
-			invalidPage: "Invalid page number"
-		}
-	},
+    onStart: async function ({ args, threadsData, message, event, api }) {
+        const { threadID, senderID, messageReply, type, mentions } = event;
 
-	onStart: async function ({ args, threadsData, message, event, api, commandName, getLang }) {
-		const { threadID, senderID } = event;
-		const threadData = await threadsData.get(threadID);
-		const { members } = threadData;
-		const usersInGroup = (await api.getThreadInfo(threadID)).participantIDs;
-		let arraySort = [];
-		for (const user of members) {
-			if (!usersInGroup.includes(user.userID))
-				continue;
-			const charac = "️️️️️️️️️️️️️️️️️"; // This character is banned from facebook chat (it is not an empty string)
-			arraySort.push({
-				name: user.name.includes(charac) ? `Uid: ${user.userID}` : user.name,
-				count: user.count,
-				uid: user.userID
-			});
-		}
-		let stt = 1;
-		arraySort.sort((a, b) => b.count - a.count);
-		arraySort.map(item => item.stt = stt++);
+        const threadData = await threadsData.get(threadID) || {};
+        const members = threadData.members || [];
+        const adminIDs = threadData.adminIDs || [];
 
-		if (args[0]) {
-			if (args[0].toLowerCase() == "all") {
-				let msg = getLang("count");
-				const endMessage = getLang("endMessage");
-				for (const item of arraySort) {
-					if (item.count > 0)
-						msg += `\n${item.stt}/ ${item.name}: ${item.count}`;
-				}
+        const threadInfo = await api.getThreadInfo(threadID);
+        const usersInGroup = threadInfo.participantIDs || [];
 
-				if ((msg + endMessage).length > 19999) {
-					msg = "";
-					let page = parseInt(args[1]);
-					if (isNaN(page))
-						page = 1;
-					const splitPage = global.utils.splitPage(arraySort, 50);
-					arraySort = splitPage.allPage[page - 1];
-					for (const item of arraySort) {
-						if (item.count > 0)
-							msg += `\n${item.stt}/ ${item.name}: ${item.count}`;
-					}
-					msg += getLang("page", page, splitPage.totalPage)
-						+ `\n${getLang("reply")}`
-						+ `\n\n${endMessage}`;
+        const isGroupAdmin = adminIDs.includes(senderID);
 
-					return message.reply(msg, (err, info) => {
-						if (err)
-							return message.err(err);
-						global.GoatBot.onReply.set(info.messageID, {
-							commandName,
-							messageID: info.messageID,
-							splitPage,
-							author: senderID
-						});
-					});
-				}
-				message.reply(msg);
-			}
-			else if (event.mentions) {
-				let msg = "";
-				for (const id in event.mentions) {
-					const findUser = arraySort.find(item => item.uid == id);
-					msg += `\n${getLang("result", findUser.name, findUser.stt, findUser.count)}`;
-				}
-				message.reply(msg);
-			}
-		}
-		else {
-			const findUser = arraySort.find(item => item.uid == senderID);
-			return message.reply(getLang("yourResult", findUser.stt, findUser.count));
-		}
-	},
+        let arraySort = members
+            .filter(u => usersInGroup.includes(u.userID))
+            .map(u => ({
+                name: u.name,
+                count: u.count || 0,
+                uid: u.userID
+            }))
+            .sort((a, b) => b.count - a.count)
+            .map((item, index) => ({ ...item, stt: index + 1 }));
 
-	onReply: ({ message, event, Reply, commandName, getLang }) => {
-		const { senderID, body } = event;
-		const { author, splitPage } = Reply;
-		if (author != senderID)
-			return;
-		const page = parseInt(body);
-		if (isNaN(page) || page < 1 || page > splitPage.totalPage)
-			return message.reply(getLang("invalidPage"));
-		let msg = getLang("count");
-		const endMessage = getLang("endMessage");
-		const arraySort = splitPage.allPage[page - 1];
-		for (const item of arraySort) {
-			if (item.count > 0)
-				msg += `\n${item.stt}/ ${item.name}: ${item.count}`;
-		}
-		msg += getLang("page", page, splitPage.totalPage)
-			+ "\n" + getLang("reply")
-			+ "\n\n" + endMessage;
-		message.reply(msg, (err, info) => {
-			if (err)
-				return message.err(err);
-			message.unsend(Reply.messageID);
-			global.GoatBot.onReply.set(info.messageID, {
-				commandName,
-				messageID: info.messageID,
-				splitPage,
-				author: senderID
-			});
-		});
-	},
+        // 🔥 GIF FUNCTION (more stable)
+        const sendWithGif = async (text) => {
+            try {
+                const res = await axios.get("https://api.otakugifs.xyz/gif?reaction=slap");
+                const imgUrl = res.data.url;
 
-	onChat: async ({ usersData, threadsData, event }) => {
-		const { senderID, threadID } = event;
-		const members = await threadsData.get(threadID, "members");
-		const findMember = members.find(user => user.userID == senderID);
-		if (!findMember) {
-			members.push({
-				userID: senderID,
-				name: await usersData.getName(senderID),
-				nickname: null,
-				inGroup: true,
-				count: 1
-			});
-		}
-		else
-			findMember.count += 1;
-		await threadsData.set(threadID, members, "members");
-	}
+                const path = __dirname + `/cache/count_${threadID}.gif`;
+                const image = await axios.get(imgUrl, { responseType: "arraybuffer" });
 
+                fs.writeFileSync(path, Buffer.from(image.data));
+
+                return api.sendMessage({
+                    body: text,
+                    attachment: fs.createReadStream(path)
+                }, threadID, () => {
+                    if (fs.existsSync(path)) fs.unlinkSync(path);
+                });
+
+            } catch (e) {
+                return api.sendMessage(text, threadID);
+            }
+        };
+
+        // 📋 MENU
+        if (args[0] === "menu") {
+            if (!isGroupAdmin)
+                return message.reply("🚫 Only Group Admin can view this!");
+
+            return sendWithGif(
+`📋 𝐂𝐎𝐔𝐍𝐓 𝐌𝐄𝐍𝐔
+━━━━━━━━━━━━━━
+🔹 count / c → Your stats
+🔹 count @tag → User stats
+🔹 count all → Full ranking
+🔹 count remove (num) → Kick inactive
+━━━━━━━━━━━━━━
+⚡ Powered by Hasan`
+            );
+        }
+
+        // ❌ REMOVE LOW USERS
+        if (args[0] === "remove") {
+            if (!isGroupAdmin)
+                return message.reply("🚫 Admin only command");
+
+            const limit = parseInt(args[1]);
+            if (isNaN(limit))
+                return message.reply("⚠️ Example: count remove 5");
+
+            let kickCount = 0;
+
+            const toKick = arraySort.filter(u =>
+                u.count <= limit && !adminIDs.includes(u.uid)
+            );
+
+            for (const user of toKick) {
+                try {
+                    await api.removeUserFromGroup(user.uid, threadID);
+                    kickCount++;
+                } catch {}
+            }
+
+            return sendWithGif(`✅ Removed ${kickCount} inactive members`);
+        }
+
+        // 🏆 LEADERBOARD
+        if (args[0] === "all") {
+            let msg = `🏆 GROUP LEADERBOARD\n━━━━━━━━━━━━━━`;
+
+            for (const item of arraySort.slice(0, 20)) {
+                msg += `\n${item.stt}. ${item.name} → ${item.count}`;
+            }
+
+            return sendWithGif(msg + `\n━━━━━━━━━━━━━━\n⚡ Hasan System`);
+        }
+
+        // 👤 USER STATS
+        let targetID = senderID;
+
+        if (type === "message_reply")
+            targetID = messageReply.senderID;
+
+        if (Object.keys(mentions).length > 0)
+            targetID = Object.keys(mentions)[0];
+
+        const findUser = arraySort.find(item => item.uid == targetID);
+
+        if (!findUser)
+            return message.reply("❌ User not found");
+
+        return sendWithGif(
+`📊 USER STATS
+━━━━━━━━━━━━━━
+👤 Name: ${findUser.name}
+🏆 Rank: #${findUser.stt}
+💬 Messages: ${findUser.count}
+━━━━━━━━━━━━━━
+⚡ Hasan System`
+        );
+    },
+
+    // 🔄 AUTO COUNT
+    onChat: async ({ usersData, threadsData, event }) => {
+        const { senderID, threadID } = event;
+
+        let members = await threadsData.get(threadID, "members") || [];
+
+        let user = members.find(u => u.userID == senderID);
+
+        if (!user) {
+            members.push({
+                userID: senderID,
+                name: await usersData.getName(senderID),
+                count: 1
+            });
+        } else {
+            user.count = (user.count || 0) + 1;
+        }
+
+        await threadsData.set(threadID, members, "members");
+    }
 };
