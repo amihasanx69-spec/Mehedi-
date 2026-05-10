@@ -1,14 +1,25 @@
 const axios = require("axios");
 const { getStreamFromURL, shortenURL } = global.utils;
 
-async function fetchTikTokVideos(query) {
+async function fetchVideos(query) {
   try {
-    const response = await axios.get(`https://lyric-search-neon.vercel.app/kshitiz?keyword=${encodeURIComponent(query)}`);
-    return response.data;
-  } catch (error) {
-    console.log(error);
+    const res = await axios.get(
+      `https://lyric-search-neon.vercel.app/kshitiz?keyword=${encodeURIComponent(query)}`
+    );
+    return res.data;
+  } catch (e) {
     return null;
   }
+}
+
+// clean title
+function cleanTitle(text = "") {
+  return text
+    .replace(/\(.*?\)/g, "")
+    .replace(/\[.*?\]/g, "")
+    .replace(/official|video|lyrics|audio/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 module.exports = {
@@ -16,117 +27,100 @@ module.exports = {
     name: "lyricvideo",
     aliases: ["lv"],
     author: "Hasan",
-    version: "2.1",
-    shortDescription: {
-      en: "Play Lyric Video (Short + Long)"
-    },
-    longDescription: {
-      en: "Search & Send Beautiful Lyric Video"
-    },
+    version: "2.3-FIX",
     category: "fun",
-    guide: {
-      en: "{p}{n} [song name] or reply to audio/video"
+    shortDescription: {
+      en: "Play Lyric Video (Auto Delete Wait Msg)"
     }
   },
 
   onStart: async function ({ api, event, args }) {
 
-    const emojiReact = [
-      "🎧","🎶","🎵","✨","💫","🔥",
-      "📀","🎤","🖤","🌈","⚡","💥",
-      "📹","🎬","🫶","🥀","🎼","🎹",
-      "🎻","🎷","🪩","🌟","🔊","🎚️",
-      "🎛️","📻","🎙️","💿","🌀","🌌",
-      "🕊️","💎","🌠","🎇","🎆","🧿"
-    ];
+    const emojis = ["🎶","🎧","🔥","✨","💿","⚡","🖤"];
+
+    // 🔥 Waiting message (store ID)
+    const waitMsg = await api.sendMessage(
+`╭─🎶 LYRIC VIDEO
+│ 🔎 Searching song...
+│ ⏳ Please wait...
+╰──────────────`,
+      event.threadID
+    );
 
     api.setMessageReaction(
-      emojiReact[Math.floor(Math.random() * emojiReact.length)],
+      emojis[Math.floor(Math.random() * emojis.length)],
       event.messageID,
       () => {},
       true
     );
 
     try {
-
       let query = "";
 
-      // ===== Waiting Message =====
-      const waitingMessages = [
-`╭─❍ 🎶 𝗟𝘆𝗿𝗶𝗰 𝗩𝗶𝗱𝗲𝗼 𝗦𝘆𝘀𝘁𝗲𝗺
-├ ✨ Searching Beautiful Video...
-├ 🎧 Please Wait A Moment
-╰───────────────⍟`,
+      // 🎧 Reply system
+      if (event.messageReply?.attachments?.length) {
+        const att = event.messageReply.attachments[0];
 
-`╔═══ 🎵 𝗣𝗿𝗼𝗰𝗲𝘀𝘀𝗶𝗻𝗴 🎵 ═══╗
-┃ 🔎 Finding Best Lyric Video
-┃ 📀 Loading Music Experience...
-┃ ⚡ Almost Ready
-╚═══════════════════════╝`,
+        if (att.type === "audio" || att.type === "video") {
 
-`🌌 Connecting To Music Server...
-🎶 Collecting HD Lyric Video
-✨ Please Wait...`
-      ];
+          const shortUrl = await shortenURL(att.url);
 
-      api.sendMessage(
-        waitingMessages[Math.floor(Math.random() * waitingMessages.length)],
-        event.threadID
-      );
-
-      // ===== Reply to audio/video =====
-      if (event.messageReply && event.messageReply.attachments.length > 0) {
-        const attachment = event.messageReply.attachments[0];
-
-        if (attachment.type === "video" || attachment.type === "audio") {
-
-          const shortUrl = await shortenURL(attachment.url);
-
-          const musicRecognition = await axios.get(
+          const res = await axios.get(
             `https://audio-reco.onrender.com/kshitiz?url=${encodeURIComponent(shortUrl)}`
           );
 
-          query = musicRecognition.data.title;
+          query = cleanTitle(res.data?.title || "");
 
         } else {
+          api.unsendMessage(waitMsg.messageID);
           return api.sendMessage(
-            "❌ Reply only to audio or video.",
+            "❌ Only reply to audio/video!",
             event.threadID,
             event.messageID
           );
         }
       }
 
-      // ===== Text search =====
-      else if (args.length > 0) {
+      // 🎧 text search
+      else if (args.length) {
         query = args.join(" ");
       }
 
       else {
+        api.unsendMessage(waitMsg.messageID);
         return api.sendMessage(
-          "⚠️ Please provide a song name or reply to an audio/video.",
+          "⚠️ Give a song name or reply to audio/video!",
           event.threadID,
           event.messageID
         );
       }
 
-      const finalQuery = `${query} lyrics video edit`;
-      const videos = await fetchTikTokVideos(finalQuery);
-
-      if (!videos || videos.length === 0) {
+      if (!query) {
+        api.unsendMessage(waitMsg.messageID);
         return api.sendMessage(
-          `❌ No lyric video found for: ${query}`,
+          "❌ Song not detected!",
           event.threadID,
           event.messageID
         );
       }
 
-      const selectedVideo =
-        videos[Math.floor(Math.random() * videos.length)];
+      const finalQuery = `${cleanTitle(query)} lyrics video`;
 
-      const videoUrl = selectedVideo.videoUrl;
+      const videos = await fetchVideos(finalQuery);
 
-      if (!videoUrl) {
+      if (!videos || !videos.length) {
+        api.unsendMessage(waitMsg.messageID);
+        return api.sendMessage(
+          "❌ No lyric video found!",
+          event.threadID,
+          event.messageID
+        );
+      }
+
+      const video = videos[0];
+
+      if (!video?.videoUrl) {
+        api.unsendMessage(waitMsg.messageID);
         return api.sendMessage(
           "❌ Video not found!",
           event.threadID,
@@ -134,31 +128,32 @@ module.exports = {
         );
       }
 
-      const videoStream = await getStreamFromURL(videoUrl);
+      const stream = await getStreamFromURL(video.videoUrl);
 
-      api.sendMessage(
+      // 🔥 DELETE WAITING MESSAGE BEFORE SENDING VIDEO
+      api.unsendMessage(waitMsg.messageID);
+
+      return api.sendMessage(
         {
           body:
-`╔═══ 🎶 𝗟𝗬𝗥𝗜𝗖 𝗩𝗜𝗗𝗘𝗢 🎶 ═══╗
-┃
-┃ ✨ Now Playing: ${query}
-┃ 📀 Enjoy The Music...
-┃ 🎧 Ultra HD Lyric Experience
-┃
-┃ 👑 Author: Hasan
-┃ 
-┃
-╚═══════════════════════╝`,
-          attachment: videoStream
+`╔══ 🎶 LYRIC VIDEO 🎶 ══╗
+┃ 🎧 Song: ${query}
+┃ ✨ Enjoy Music
+┃ 👑 Powered by Hasan
+╚════════════════════╝`,
+          attachment: stream
         },
         event.threadID,
         event.messageID
       );
 
-    } catch (e) {
-      console.log(e);
-      api.sendMessage(
-        "❌ Error while fetching lyric video!\nTry again later.",
+    } catch (err) {
+      console.log(err);
+
+      api.unsendMessage(waitMsg.messageID);
+
+      return api.sendMessage(
+        "❌ Error fetching lyric video!",
         event.threadID,
         event.messageID
       );
