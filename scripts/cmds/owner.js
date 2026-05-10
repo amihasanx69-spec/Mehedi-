@@ -1,72 +1,115 @@
-const axios = require('axios');
-const fs = require('fs');
-const path = require('path');
+const axios = require("axios");
 
 module.exports = {
-	config: {
-		name: "owner",
-		author: "ShAn",
-		role: 0,
-		shortDescription: " ",
-		longDescription: "",
-		category: "admin",
-		guide: "{pn}"
-	},
+  config: {
+    name: "owner",
+    author: "Hasan + ChatGPT",
+    role: 0,
+    shortDescription: "Stylish Owner Info + Random Anime Edit Video",
+    category: "admin",
+    guide: "{pn}"
+  },
 
-	onStart: async function ({ api, event }) {
-		try {
-			const ownerInfo = {
-				name: '𝑬𝒘𝑹 𝑺𝒉𝑨𝒏',
-				gender: '𝑴𝒂𝑳𝒆',
-				Birthday: '10-𝟎𝟕-𝟐𝟎𝟎5',
-				religion: '𝙄𝒔𝒍𝑨𝒎',
-				hobby: '𝑺𝒍𝒆𝒆𝑷𝒊𝒏𝑮',
-				Fb: 'https://www.facebook.com/Sh4n.Dev1',
-				Relationship: '𝑺𝒊𝒏𝑮𝒆𝒍',
-				Height: '5"3'
-			};
+  onStart: async function ({ api, event }) {
+    try {
 
-			const bold = 'https://drive.google.com/uc?export=download&id=1J4yQ13L2WTpdOuqcP0yEmzULACdwfvnQ';
-			const tmpFolderPath = path.join(__dirname, 'tmp');
+      // 👤 OWNER INFO (Stylish)
+      const owner = {
+        name: "Mehedi Hasan",
+        gender: "Male",
+        birthday: "13/07/2008",
+        religion: "Alhamdulillah Muslim ☪",
+        hobby: "Gaming 🎮 + Editing",
+        relationship: "Top Secret 🤫",
+        vibe: "Silent Killer 😎"
+      };
 
-			if (!fs.existsSync(tmpFolderPath)) {
-				fs.mkdirSync(tmpFolderPath);
-			}
+      // 🎥 Multiple API fallback system
+      let videoUrl = null;
 
-			const videoResponse = await axios.get(bold, { responseType: 'arraybuffer' });
-			const videoPath = path.join(tmpFolderPath, 'owner_video.mp4');
+      const sources = [
+        "https://www.tikwm.com/api/feed/search?keywords=anime%20edit",
+        "https://www.tikwm.com/api/feed/search?keywords=anime%20status",
+        "https://www.tikwm.com/api/feed/search?keywords=amv%20edit"
+      ];
 
-			fs.writeFileSync(videoPath, Buffer.from(videoResponse.data, 'binary'));
+      for (let url of sources) {
+        try {
+          const res = await axios.get(url);
 
-			const response = `
-◈ 𝖮𝖶𝖭𝖤𝖱 𝖨𝖭𝖥𝖮𝖱𝖬𝖠𝖳𝖨𝖮𝖭:\n
- ~Name: ${ownerInfo.name}
- ~Gender: ${ownerInfo.gender}
- ~Birthday: ${ownerInfo.Birthday}
- ~Religion: ${ownerInfo.religion}
- ~Relationship: ${ownerInfo.Relationship}
- ~Hobby: ${ownerInfo.hobby}
- ~Fb: ${ownerInfo.Fb}
- ~Height: ${ownerInfo.Height}
-			`;
+          const videos =
+            res?.data?.data?.videos ||
+            res?.data?.data ||
+            [];
 
-			await api.sendMessage({
-				body: response,
-				attachment: fs.createReadStream(videoPath)
-			}, event.threadID, event.messageID);
-			
-			fs.unlinkSync(videoPath);
+          if (Array.isArray(videos) && videos.length > 0) {
+            const random =
+              videos[Math.floor(Math.random() * videos.length)];
 
-			api.setMessageReaction('😍', event.messageID, (err) => {}, true);
-		} catch (error) {
-			console.error('Error in ownerinfo command:', error);
-			return api.sendMessage('An error occurred while processing the command.', event.threadID);
-		}
-	},
+            videoUrl =
+              random?.play ||
+              random?.wmplay ||
+              random?.url;
 
-	onChat: async function ({ api, event }) {
-		if (event.body && event.body.toLowerCase() === "owner") {
-			this.onStart({ api, event });
-		}
-	}
+            if (videoUrl) break;
+          }
+
+        } catch (e) {
+          continue;
+        }
+      }
+
+      if (!videoUrl) {
+        return api.sendMessage(
+          "❌ ভিডিও লোড হচ্ছে না, পরে try করো 😢",
+          event.threadID
+        );
+      }
+
+      // 💎 Stylish UI Message
+      const msg = `
+╔══════════════════════╗
+        🔥 OWNER INFO 🔥
+╚══════════════════════╝
+
+👤 Name      : ${owner.name}
+⚧ Gender    : ${owner.gender}
+🎂 Birthday  : ${owner.birthday}
+☪ Religion   : ${owner.religion}
+🎮 Hobby     : ${owner.hobby}
+💖 Status    : ${owner.relationship}
+😎 Vibe      : ${owner.vibe}
+
+╔══════════════════════╗
+   ⚡ Powered by Hasan Bot ⚡
+╚══════════════════════╝
+`;
+
+      // 🥵 reaction
+      api.setMessageReaction("🥵", event.messageID, () => {}, true);
+
+      // 📩 send video + message
+      await api.sendMessage(
+        {
+          body: msg,
+          attachment: await global.utils.getStreamFromURL(videoUrl)
+        },
+        event.threadID,
+        event.messageID
+      );
+
+    } catch (error) {
+      console.log("Owner command error:", error);
+      return api.sendMessage(
+        "❌ কিছু error হয়েছে bro 😔",
+        event.threadID
+      );
+    }
+  },
+
+  onChat: async function ({ api, event }) {
+    if (event.body?.toLowerCase() === "owner") {
+      this.onStart({ api, event });
+    }
+  }
 };
