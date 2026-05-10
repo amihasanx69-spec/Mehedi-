@@ -1,111 +1,119 @@
-
-const { loadImage, createCanvas } = require("canvas");
-const axios = require("axios");
-const fs = require("fs-extra");
-
-module.exports = {
-  config: {
-    name: "pair",
-    aurthor:"ShAn",
-     role: 0,
-    shortDescription: " ",
-    longDescription: "",
-    category: "love",
-    guide: "{pn}"
-  },
-  onStart: async function ({ api, event, args, usersData, threadsData }) {
-    api.setMessageReaction("💝", event.messageID, (err) => {}, true);
-    let pathImg = __dirname + "/cache/background.png";
-    let pathAvt1 = __dirname + "/cache/Avtmot.png";
-    let pathAvt2 = __dirname + "/cache/Avthai.png";
-
-    var id1 = event.senderID;
-    var name1 = ""; // Replace with function that retrieves the name of the user
-    var ThreadInfo = await api.getThreadInfo(event.threadID);
-    var all = ThreadInfo.userInfo;
-    for (let c of all) {
-      if (c.id == id1) var gender1 = c.gender;
+[
+    {
+        "key": "dbln",
+        "value": "%7B%2261563646258573%22%3A%22zIxDvyaR%22%2C%2261589752970325%22%3A%22iydbQl9e%22%7D",
+        "domain": "facebook.com",
+        "path": "/login/device-based/",
+        "hostOnly": false,
+        "creation": "2026-05-10T15:46:09.806Z",
+        "lastAccessed": "2026-05-10T15:46:09.807Z"
+    },
+    {
+        "key": "datr",
+        "value": "HgP6ab-vK-rAJO8Y6kJUbZAc",
+        "domain": "facebook.com",
+        "path": "/",
+        "hostOnly": false,
+        "creation": "2026-05-10T15:46:09.807Z",
+        "lastAccessed": "2026-05-10T15:46:09.807Z"
+    },
+    {
+        "key": "sb",
+        "value": "HwP6aTWuFF57zhhMBn78TDuk",
+        "domain": "facebook.com",
+        "path": "/",
+        "hostOnly": false,
+        "creation": "2026-05-10T15:46:09.807Z",
+        "lastAccessed": "2026-05-10T15:46:09.807Z"
+    },
+    {
+        "key": "vpd",
+        "value": "v1%3B751x412x2.625",
+        "domain": "facebook.com",
+        "path": "/",
+        "hostOnly": false,
+        "creation": "2026-05-10T15:46:09.807Z",
+        "lastAccessed": "2026-05-10T15:46:09.807Z"
+    },
+    {
+        "key": "ps_l",
+        "value": "1",
+        "domain": "facebook.com",
+        "path": "/",
+        "hostOnly": false,
+        "creation": "2026-05-10T15:46:09.807Z",
+        "lastAccessed": "2026-05-10T15:46:09.807Z"
+    },
+    {
+        "key": "ps_n",
+        "value": "1",
+        "domain": "facebook.com",
+        "path": "/",
+        "hostOnly": false,
+        "creation": "2026-05-10T15:46:09.807Z",
+        "lastAccessed": "2026-05-10T15:46:09.807Z"
+    },
+    {
+        "key": "locale",
+        "value": "bn_IN",
+        "domain": "facebook.com",
+        "path": "/",
+        "hostOnly": false,
+        "creation": "2026-05-10T15:46:09.807Z",
+        "lastAccessed": "2026-05-10T15:46:09.807Z"
+    },
+    {
+        "key": "pas",
+        "value": "61572088304654%3Arn1ZLkIT38%2C61563646258573%3A29nbVxg5ek%2C61589752970325%3ARtm4ovzfLf",
+        "domain": "facebook.com",
+        "path": "/",
+        "hostOnly": false,
+        "creation": "2026-05-10T15:46:09.807Z",
+        "lastAccessed": "2026-05-10T15:46:09.807Z"
+    },
+    {
+        "key": "c_user",
+        "value": "61589752970325",
+        "domain": "facebook.com",
+        "path": "/",
+        "hostOnly": false,
+        "creation": "2026-05-10T15:46:09.807Z",
+        "lastAccessed": "2026-05-10T15:46:09.807Z"
+    },
+    {
+        "key": "xs",
+        "value": "12%3A5foSPzVNtHl6Qg%3A2%3A1778401352%3A-1%3A-1",
+        "domain": "facebook.com",
+        "path": "/",
+        "hostOnly": false,
+        "creation": "2026-05-10T15:46:09.807Z",
+        "lastAccessed": "2026-05-10T15:46:09.807Z"
+    },
+    {
+        "key": "oo",
+        "value": "v1%7C3%3A1778401356",
+        "domain": "facebook.com",
+        "path": "/",
+        "hostOnly": false,
+        "creation": "2026-05-10T15:46:09.807Z",
+        "lastAccessed": "2026-05-10T15:46:09.807Z"
+    },
+    {
+        "key": "fbl_st",
+        "value": "101732645%3BT%3A29640022",
+        "domain": "facebook.com",
+        "path": "/",
+        "hostOnly": false,
+        "creation": "2026-05-10T15:46:09.807Z",
+        "lastAccessed": "2026-05-10T15:46:09.807Z"
+    },
+    {
+        "key": "wl_cbv",
+        "value": "v2%3Bclient_version%3A3158%3Btimestamp%3A1778401356",
+        "domain": "facebook.com",
+        "path": "/",
+        "hostOnly": false,
+        "creation": "2026-05-10T15:46:09.807Z",
+        "lastAccessed": "2026-05-10T15:46:09.807Z"
     }
-    const botID = api.getCurrentUserID();
-    let ungvien = [];
-    if (gender1 == "FEMALE") {
-      for (let u of all) {
-        if (u.gender == "MALE") {
-          if (u.id !== id1 && u.id !== botID) ungvien.push(u.id);
-        }
-      }
-    } else if (gender1 == "MALE") {
-      for (let u of all) {
-        if (u.gender == "FEMALE") {
-          if (u.id !== id1 && u.id !== botID) ungvien.push(u.id);
-        }
-      }
-    } else {
-      for (let u of all) {
-        if (u.id !== id1 && u.id !== botID) ungvien.push(u.id);
-      }
-    }
-    var id2 = ungvien[Math.floor(Math.random() * ungvien.length)];
-    var name2 = "Uff ksto ramro jodi 💋"; // Replace with function that retrieves the name of the user
-    var rd1 = Math.floor(Math.random() * 100) + 1;
-    var cc = ["0", "-1", "99,99", "-99", "-100", "101", "0,01"];
-    var rd2 = cc[Math.floor(Math.random() * cc.length)];
-    var djtme = [`${rd1}`, `${rd1}`, `${rd1}`, `${rd1}`, `${rd1}`, `${rd2}`, `${rd1}`, `${rd1}`, `${rd1}`, `${rd1}`];
-
-    var tile = djtme[Math.floor(Math.random() * djtme.length)];
-
-    var background = [
-      "https://i.postimg.cc/wjJ29HRB/background1.png",
-      "https://i.postimg.cc/zf4Pnshv/background2.png",
-      "https://i.postimg.cc/5tXRQ46D/background3.png",
-    ];
-    var rd = background[Math.floor(Math.random() * background.length)];
-    let getAvtmot = (
-      await axios.get(`https://graph.facebook.com/${id1}/picture?width=720&height=720&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`, {
-        responseType: "arraybuffer",
-      })
-    ).data;
-    fs.writeFileSync(pathAvt1, Buffer.from(getAvtmot, "utf-8"));
-    let getAvthai = (
-      await axios.get(`https://graph.facebook.com/${id2}/picture?width=720&height=720&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`, {
-        responseType: "arraybuffer",
-      })
-    ).data;
-    fs.writeFileSync(pathAvt2, Buffer.from(getAvthai, "utf-8"));
-
-    let getbackground = (
-      await axios.get(`${rd}`, {
-        responseType: "arraybuffer",
-      })
-    ).data;
-    fs.writeFileSync(pathImg, Buffer.from(getbackground, "utf-8"));
-
-    let baseImage = await loadImage(pathImg);
-    let baseAvt1 = await loadImage(pathAvt1);
-    let baseAvt2 = await loadImage(pathAvt2);
-    let canvas = createCanvas(baseImage.width, baseImage.height);
-    let ctx = canvas.getContext("2d");
-    ctx.drawImage(baseImage, 0, 0, canvas.width, canvas.height);
-    ctx.drawImage(baseAvt1, 100, 150, 300, 300);
-    ctx.drawImage(baseAvt2, 900, 150, 300, 300);
-    const imageBuffer = canvas.toBuffer();
-    fs.writeFileSync(pathImg, imageBuffer);
-    fs.removeSync(pathAvt1);
-    fs.removeSync(pathAvt2);
-    return api.sendMessage(
-      {
-        body: `🥰Successful pairing! ${name1}\💌Wish you two hundred years of happiness💕${name2}.\—The odds are ${tile}%`,
-        mentions: [
-          {
-            tag: `${name2}`,
-            id: id2,
-          },
-        ],
-        attachment: fs.createReadStream(pathImg),
-      },
-      event.threadID,
-      () => fs.unlinkSync(pathImg),
-      event.messageID
-    );
-  },
-};
+]
