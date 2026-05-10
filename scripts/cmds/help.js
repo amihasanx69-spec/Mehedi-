@@ -25,9 +25,9 @@ module.exports = {
     if (!args.length) {
       const categories = {};
       let msg = `
-╔══════════════════════╗
-      🤖 𝗕𝗢𝗧 𝗖𝗢𝗠𝗠𝗔𝗡𝗗𝗦
-╚══════════════════════╝
+╔══════════════════════════╗
+     🤖 𝗩𝗜𝗣 𝗕𝗢𝗧 𝗠𝗘𝗡𝗨
+╚══════════════════════════╝
 `;
 
       for (const [name, value] of commands) {
@@ -39,25 +39,25 @@ module.exports = {
       }
 
       for (const category of Object.keys(categories)) {
-        msg += `\n╭───〔 ${category.toUpperCase()} 〕───╮`;
+        msg += `\n╭━━━〔 ✦ ${category.toUpperCase()} ✦ 〕━━━╮`;
 
         categories[category].sort().forEach(cmd => {
-          msg += `\n│ ✦ ${cmd}`;
+          msg += `\n┃ ✧ ${cmd}`;
         });
 
-        msg += `\n╰────────────────╯\n`;
+        msg += `\n╰━━━━━━━━━━━━━━━━━━━━━━╯\n`;
       }
 
       msg += `
-╔══════════════════════╗
-┃ 📊 Total Commands: ${commands.size}
-┃ ⚡ Prefix: ${prefix}
-┃ 👑 Owner: Hasan
-┃ 🚀 Status: Online
-╚══════════════════════╝
+╔══════════════════════════╗
+┃ 📊 Total : ${commands.size}
+┃ ⚡ Prefix : ${prefix}
+┃ 👑 Owner  : Hasan
+┃ 🚀 Status : ONLINE
+╚══════════════════════════╝
 `;
 
-      // ================= ANIME GIF =================
+      // ================= GIF =================
       try {
         const cacheDir = path.join(__dirname, "cache");
         if (!fs.existsSync(cacheDir)) {
@@ -66,12 +66,9 @@ module.exports = {
 
         const filePath = path.join(cacheDir, `help_${Date.now()}.gif`);
 
-        // Anime GIF API
         const res = await axios.get(
           "https://api.otakugifs.xyz/gif?reaction=punch",
-          {
-            timeout: 5000
-          }
+          { timeout: 5000 }
         );
 
         const gifUrl = res?.data?.url;
@@ -84,18 +81,10 @@ module.exports = {
 
           fs.writeFileSync(filePath, Buffer.from(gif.data));
 
-          await message.reply({
+          return message.reply({
             body: msg,
             attachment: fs.createReadStream(filePath)
           });
-
-          setTimeout(() => {
-            if (fs.existsSync(filePath)) {
-              fs.unlinkSync(filePath);
-            }
-          }, 5000);
-
-          return;
         }
       } catch (e) {
         console.log("GIF Error:", e.message);
@@ -112,7 +101,12 @@ module.exports = {
         commands.get(aliases.get(cmdName));
 
       if (!command) {
-        return message.reply(`❌ Command "${cmdName}" not found`);
+        return message.reply(`
+╔════════════════╗
+ ❌ COMMAND NOT FOUND
+╚════════════════╝
+"${cmdName}" নেই 😒
+`);
       }
 
       const config = command.config;
@@ -122,18 +116,21 @@ module.exports = {
         `${prefix}${config.name}`;
 
       const msg = `
-╔══════════════════════╗
-        ⚙️ COMMAND INFO
-╚══════════════════════╝
-┃ 📛 Name: ${config.name}
-┃ 👑 Author: ${config.author}
-┃ 📦 Version: ${config.version || "1.0"}
-┃ 🔰 Role: ${config.role || 0}
-┃ 📂 Category: ${config.category}
-┣━━━━━━━━━━━━━━━━━━━━━━
-┃ 📖 Usage:
+╔══════════════════════════╗
+        ⚙️ 𝗩𝗜𝗣 𝗖𝗠𝗗 𝗜𝗡𝗙𝗢
+╚══════════════════════════╝
+
+╭━━━〔 📛 COMMAND INFO 〕━━━╮
+┃ ✦ Name     : ${config.name}
+┃ ✦ Author   : ${config.author}
+┃ ✦ Version  : ${config.version || "1.0"}
+┃ ✦ Category  : ${config.category}
+┃ ✦ Role     : ${config.role || 0}
+╰━━━━━━━━━━━━━━━━━━━━━━━╯
+
+╭━━━〔 📖 USAGE 〕━━━╮
 ┃ ${usage}
-╚━━━━━━━━━━━━━━━━━━━━━━╝
+╰━━━━━━━━━━━━━━━━━━━╯
 `;
 
       return message.reply(msg);
