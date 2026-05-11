@@ -1,10 +1,10 @@
 module.exports = {
   config: {
     name: "antiout",
-    version: "7.0",
+    version: "7.2",
     author: "Hasan X + ChatGPT",
     role: 0,
-    shortDescription: "Funny Anti Leave System",
+    shortDescription: "Funny Anti Leave System (Fixed + Ultra Funny)",
     category: "boxchat",
     guide: "{pn} on/off"
   },
@@ -16,16 +16,12 @@ module.exports = {
 
     const option = args[0].toLowerCase();
 
-    if (option !== "on" && option !== "off")
+    if (!["on", "off"].includes(option))
       return message.reply("❌ Only use on/off");
 
     const status = option === "on";
 
-    await threadsData.set(
-      event.threadID,
-      status,
-      "settings.antiout"
-    );
+    await threadsData.set(event.threadID, status, "settings.antiout");
 
     return message.reply(
       status
@@ -36,58 +32,69 @@ module.exports = {
 
   onEvent: async function ({ api, event, threadsData, usersData }) {
 
-    if (event.logMessageType !== "log:unsubscribe") return;
+    try {
+      if (event.logMessageType !== "log:unsubscribe") return;
 
-    const antiout = await threadsData.get(
-      event.threadID,
-      "settings.antiout"
-    );
+      const antiout = await threadsData.get(
+        event.threadID,
+        "settings.antiout"
+      );
 
-    if (!antiout) return;
+      if (!antiout) return;
 
-    const leftID = event.logMessageData.leftParticipantFbId;
-    const botID = api.getCurrentUserID();
+      const leftID = event.logMessageData?.leftParticipantFbId;
+      const botID = api.getCurrentUserID();
 
-    // ignore bot itself
-    if (leftID == botID) return;
+      if (!leftID || leftID === botID) return;
 
-    // only real self-leave
-    if (leftID != event.author) return;
+      // safe check (avoid fake triggers)
+      if (event.author && leftID !== event.author) return;
 
-    setTimeout(async () => {
+      // re-add user
+      await api.addUserToGroup(leftID, event.threadID);
 
-      try {
+      const name = await usersData.getName(leftID) || "User";
 
-        await api.addUserToGroup(leftID, event.threadID);
+      const msgList = [
+        `😹 ${name} কোথায় যাস রে?`,
+        `🚪 দরজা বন্ধ ছিল তাও পালাইতে গেছিলি 🤡`,
+        `🐸 Hasan Boss তোকে আবার টেনে আনছে!`,
+        `📌 এই গ্রুপ থেকে leave নেওয়া নিষিদ্ধ 😹`,
+        `🫵 ধরা খাইছস আবার add হইয়া গেছস!`,
+        `😼 পালাতে গেছিলি? সিস্টেম তোকে ফিরায় আনছে!`,
+        `🤖 Escape denied! Welcome back 😹`,
+        `🐷 গ্রুপ ছাড়ার পরিণাম = আবার ঢোকা 🤡`,
 
-        const name = await usersData.getName(leftID);
+        // 🔥 FUNNY UPGRADE PACK
+        `😂 ${name} ভাবছিলি পালাবি, কিন্তু সার্ভার তো হাসতেছে 🤖`,
+        `🐸 তোকে ছাড়া গ্রুপ শূন্য লাগে না, শূন্য আবার full করে দিলাম 😹`,
+        `🚔 পালানো অপরাধ, শাস্তি = আবার group jail 😆`,
+        `🤡 ${name} = Try again failed successfully 😭`,
+        `💀 তুই পালাইস নাই, তুই শুধু লোডিং স্ক্রিনে আটকা ছিলি 😹`,
+        `📡 Signal lost… but system found you anyway 🤖`,
+        `🐷 গ্রুপ ছাড়তে গেছিলি? আমরা তো স্ক্রিপ্ট দিয়ে বান্দি বানাই 😆`,
+        `⚠️ Warning: ${name} tried to escape… result: clown reset 🤡`,
+        `🧠 ব্রেইন: পালা 😎 | সিস্টেম: না 😈 | result: ${name} ফিরে আসছে 😹`,
+        `🎯 Mission failed successfully: ${name} detected again 🤖`
+      ];
 
-        const msg = [
-          `😹 @${name} কোথায় যাস রে?`,
-          `🚪 দরজা বন্ধ ছিল তাও পালাইতে গেছিলি 🤡`,
-          `🐸 Hasan Boss তোকে আবার টেনে আনছে!`,
-          `📌 এই গ্রুপ থেকে leave নেওয়া নিষিদ্ধ 😹`,
-          `🫵 ধরা খাইছস আবার add হইয়া গেছস!`,
-          `😼 পালাতে গেছিলি? সিস্টেম তোকে ফিরায় আনছে!`,
-          `🤖 Escape denied! Welcome back 😹`,
-          `🐷 গ্রুপ ছাড়ার পরিণাম = আবার ঢোকা 🤡`
-        ];
+      const randomMsg = msgList[Math.floor(Math.random() * msgList.length)];
 
-        const randomMsg =
-          msg[Math.floor(Math.random() * msg.length)];
-
-        api.sendMessage({
+      return api.sendMessage(
+        {
           body: randomMsg,
-          mentions: [{
-            tag: name,
-            id: leftID
-          }]
-        }, event.threadID);
+          mentions: [
+            {
+              tag: name,
+              id: leftID
+            }
+          ]
+        },
+        event.threadID
+      );
 
-      } catch (e) {
-        console.log("Antiout Error:", e);
-      }
-
-    }, 4000);
+    } catch (err) {
+      console.log("Antiout Error Fixed:", err);
+    }
   }
 };
