@@ -3,7 +3,7 @@ const { getTime, drive } = global.utils;
 module.exports = {
 	config: {
 		name: "leave",
-		version: "2.0",
+		version: "2.1",
 		author: "NTKhang + Hasan",
 		category: "events"
 	},
@@ -19,108 +19,112 @@ module.exports = {
 
 	onStart: async ({ threadsData, message, event, api, usersData, getLang }) => {
 
-		if (event.logMessageType == "log:unsubscribe")
-			return async function () {
+		// শুধু leave/kick event detect
+		if (event.logMessageType !== "log:unsubscribe")
+			return;
 
-				const { threadID } = event;
+		try {
 
-				const threadData = await threadsData.get(threadID);
+			const { threadID, author } = event;
 
-				if (!threadData.settings.sendLeaveMessage)
-					return;
+			const threadData = await threadsData.get(threadID);
 
-				const { leftParticipantFbId } = event.logMessageData;
+			if (!threadData.settings.sendLeaveMessage)
+				return;
 
-				if (leftParticipantFbId == api.getCurrentUserID())
-					return;
+			const { leftParticipantFbId } = event.logMessageData;
 
-				const userName = await usersData.getName(leftParticipantFbId);
-				const threadName = threadData.threadName || "Unknown Group";
+			// Bot নিজে leave করলে skip
+			if (leftParticipantFbId == api.getCurrentUserID())
+				return;
 
-				const hours = getTime("HH");
-				const minutes = getTime("mm");
+			const userName = await usersData.getName(leftParticipantFbId) || "Unknown User";
+			const threadName = threadData.threadName || "Unknown Group";
 
-				const session =
-					hours <= 10 ? getLang("session1") :
-					hours <= 12 ? getLang("session2") :
-					hours <= 18 ? getLang("session3") :
-					getLang("session4");
+			const hours = getTime("HH");
+			const minutes = getTime("mm");
 
-				// User নিজে leave দিলে
-				const leaveMessages = [
-					`😢 ${userName} গ্রুপ ছেড়ে পালাইছে... WiFi বিল দিতে পারে নাই মনে হয় 😭`,
-					`💔 ${userName} চলে গেছে! এখন group-এর cringe level একটু কমলো 😹`,
-					`🚶 ${userName} লিফট নিছে... মনে হয় প্রেমে ধোঁকা খাইছে 😭💔`,
-					`🥺 ${userName} আর থাকতে পারলো না... admin-এর ভয় পাইছে বোধহয় 👀`,
-					`📤 ${userName} group leave দিছে! FBI নাকি খুঁজতেছিল 😶`,
-					`😓 ${userName} চলে গেছে... এখন কে রাতে "Hi" দিবে 😭`,
-					`👋 Bye Bye ${userName}, group-এর biryani খাইয়া পালাইছো নাকি? 🍗`,
-					`💀 ${userName} group থেকে vanish হয়ে গেছে... Doctor Strange confirm 😹`,
-					`🤧 ${userName} leave নিছে... এখন group এ আর free fire fight হবে না 🔥`,
-					`🐸 ${userName} পালাইছে! মনে হয় exam result বের হইছে 📄`,
-					`🫠 ${userName} আর সহ্য করতে পারে নাই এই group-এর মানুষজন 😭`,
-					`😂 ${userName} group leave দিলো... কিন্তু screenshots রয়ে গেছে 👀`,
-					`🚫 ${userName} offline হয়ে real life try করতে গেছে 😹`,
-					`😹 ${userName} গেছে, এখন admin শান্তিতে ঘুমাবে 💤`,
-					`🥲 ${userName} leave নিছে... এখন meme এ react দিবে কে?`
-				];
+			const session =
+				hours <= 10 ? getLang("session1") :
+				hours <= 12 ? getLang("session2") :
+				hours <= 18 ? getLang("session3") :
+				getLang("session4");
 
-				// Kick করলে
-				const kickMessages = [
-					`🚫 ${userName} কে group থেকে kick মারা হয়েছে 😹`,
-					`⚡ Admin রাগ করে ${userName} কে বের করে দিল 👀`,
-					`💀 ${userName} kicked out! Too much attitude detected 😶`,
-					`🔨 ${userName} আর এই group-এ থাকার যোগ্য না 😹`,
-					`❌ ${userName} কে লাথি মেরে group থেকে বের করা হয়েছে 😂`,
-					`😵 ${userName} এখন officially homeless in Messenger 😭`,
-					`🚷 ${userName} banned from the group area 🚫`,
-					`🪦 ${userName} এর group life এখানেই শেষ 😹`
-				];
+			// Leave messages
+			const leaveMessages = [
+				`😢 ${userName} গ্রুপ ছেড়ে পালাইছে... WiFi বিল দিতে পারে নাই মনে হয় 😭`,
+				`💔 ${userName} চলে গেছে! এখন group-এর cringe level একটু কমলো 😹`,
+				`🚶 ${userName} লিফট নিছে... মনে হয় প্রেমে ধোঁকা খাইছে 😭💔`,
+				`🥺 ${userName} আর থাকতে পারলো না... admin-এর ভয় পাইছে বোধহয় 👀`,
+				`📤 ${userName} group leave দিছে! FBI নাকি খুঁজতেছিল 😶`,
+				`😓 ${userName} চলে গেছে... এখন কে রাতে "Hi" দিবে 😭`,
+				`👋 Bye Bye ${userName}, group-এর biryani খাইয়া পালাইছো নাকি? 🍗`,
+				`💀 ${userName} group থেকে vanish হয়ে গেছে... Doctor Strange confirm 😹`,
+				`🤧 ${userName} leave নিছে... এখন group এ আর free fire fight হবে না 🔥`,
+				`🐸 ${userName} পালাইছে! মনে হয় exam result বের হইছে 📄`
+			];
 
-				// Left নাকি Kick detect
-				const isLeft = leftParticipantFbId == event.author;
+			// Kick messages
+			const kickMessages = [
+				`🚫 ${userName} কে group থেকে kick মারা হয়েছে 😹`,
+				`⚡ Admin রাগ করে ${userName} কে বের করে দিল 👀`,
+				`💀 ${userName} kicked out! Too much attitude detected 😶`,
+				`🔨 ${userName} আর এই group-এ থাকার যোগ্য না 😹`,
+				`❌ ${userName} কে লাথি মেরে group থেকে বের করা হয়েছে 😂`,
+				`😵 ${userName} এখন officially homeless in Messenger 😭`,
+				`🚷 ${userName} banned from the group area 🚫`,
+				`🪦 ${userName} এর group life এখানেই শেষ 😹`
+			];
 
-				const randomMessage = isLeft
-					? leaveMessages[Math.floor(Math.random() * leaveMessages.length)]
-					: kickMessages[Math.floor(Math.random() * kickMessages.length)];
+			// FIXED DETECTION
+			const isKick = String(leftParticipantFbId) !== String(author);
 
-				const msg = `
-╭━━━〔 👋 GROUP LEAVE 〕━━━╮
+			const randomMessage = isKick
+				? kickMessages[Math.floor(Math.random() * kickMessages.length)]
+				: leaveMessages[Math.floor(Math.random() * leaveMessages.length)];
+
+			const msg = `
+╭━━━〔 👋 GROUP UPDATE 〕━━━╮
 
 🧑 Name: ${userName}
 📌 Group: ${threadName}
 🕒 Time: ${hours}:${minutes}
 🌤️ Session: ${session}
+📍 Status: ${isKick ? "Kicked Out 🚫" : "Left Group 👋"}
+
+━━━━━━━━━━━━━━━━━━
 
 ${randomMessage}
 
 ╰━━━━━━━━━━━━━━━━━━╯
 `;
 
-				const form = {
-					body: msg,
-					mentions: [{
-						tag: userName,
-						id: leftParticipantFbId
-					}]
-				};
-
-				// Attachment support
-				if (threadData.data.leaveAttachment) {
-
-					const files = threadData.data.leaveAttachment;
-
-					const attachments = files.reduce((acc, file) => {
-						acc.push(drive.getFile(file, "stream"));
-						return acc;
-					}, []);
-
-					form.attachment = (await Promise.allSettled(attachments))
-						.filter(({ status }) => status == "fulfilled")
-						.map(({ value }) => value);
-				}
-
-				message.send(form);
+			const form = {
+				body: msg,
+				mentions: [{
+					tag: userName,
+					id: leftParticipantFbId
+				}]
 			};
+
+			// Attachment support
+			if (threadData.data.leaveAttachment) {
+
+				const files = threadData.data.leaveAttachment;
+
+				const attachments = await Promise.allSettled(
+					files.map(file => drive.getFile(file, "stream"))
+				);
+
+				form.attachment = attachments
+					.filter(item => item.status === "fulfilled")
+					.map(item => item.value);
+			}
+
+			await message.send(form);
+
+		} catch (err) {
+			console.log("Leave Event Error:", err);
+		}
 	}
 };
