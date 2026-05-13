@@ -7,9 +7,9 @@ const { commands, aliases } = global.GoatBot;
 module.exports = {
   config: {
     name: "help",
-    version: "5.0",
+    version: "6.1",
     author: "Hasan X Fix + ChatGPT",
-    countDown: 5,
+    countDown: 3,
     role: 0,
     shortDescription: { en: "View command usage" },
     longDescription: { en: "View all commands and command details" },
@@ -24,6 +24,7 @@ module.exports = {
     // ================= ALL COMMAND =================
     if (!args.length) {
       const categories = {};
+
       let msg = `
 ╔══════════════════════════╗
      🤖 𝗩𝗜𝗣 𝗕𝗢𝗧 𝗠𝗘𝗡𝗨
@@ -45,8 +46,17 @@ module.exports = {
           msg += `\n┃ ✧ ${cmd}`;
         });
 
-        msg += `\n╰━━━━━━━━━━━━━━━━━━━━━━╯\n`;
+        msg += `\n╰━━━━━━━━━━━━━━━━━━━━━━╯`;
       }
+
+      // ================= SUPPORT GC (TEXT ONLY) =================
+      msg += `
+╔══════════════════════════╗
+     💬 𝗦𝗨𝗣𝗣𝗢𝗥𝗧 𝗚𝗥𝗢𝗨𝗣
+╚══════════════════════════╝
+┃ 👉 Type: ${prefix}supportgc
+╚══════════════════════════╝
+`;
 
       msg += `
 ╔══════════════════════════╗
@@ -94,46 +104,44 @@ module.exports = {
     }
 
     // ================= SINGLE COMMAND =================
-    else {
-      const cmdName = args[0].toLowerCase();
-      const command =
-        commands.get(cmdName) ||
-        commands.get(aliases.get(cmdName));
+    const cmdName = args[0].toLowerCase();
 
-      if (!command) {
-        return message.reply(`
+    const command =
+      commands.get(cmdName) ||
+      commands.get(aliases.get(cmdName));
+
+    if (!command) {
+      return message.reply(`
 ╔════════════════╗
  ❌ COMMAND NOT FOUND
 ╚════════════════╝
+
 "${cmdName}" নেই 😒
 `);
-      }
+    }
 
-      const config = command.config;
+    const config = command.config;
 
-      const usage =
-        config.guide?.en?.replace(/{pn}/g, prefix) ||
-        `${prefix}${config.name}`;
+    const usage =
+      config.guide?.en?.replace(/{pn}/g, prefix) ||
+      `${prefix}${config.name}`;
 
-      const msg = `
+    return message.reply(`
 ╔══════════════════════════╗
-        ⚙️ 𝗩𝗜𝗣 𝗖𝗠𝗗 𝗜𝗡𝗙𝗢
+        ⚙ 𝗖𝗢𝗠𝗠𝗔𝗡𝗗 𝗜𝗡𝗙𝗢
 ╚══════════════════════════╝
 
-╭━━━〔 📛 COMMAND INFO 〕━━━╮
+╭━━━〔 📛 INFO 〕━━━╮
 ┃ ✦ Name     : ${config.name}
 ┃ ✦ Author   : ${config.author}
 ┃ ✦ Version  : ${config.version || "1.0"}
 ┃ ✦ Category  : ${config.category}
 ┃ ✦ Role     : ${config.role || 0}
-╰━━━━━━━━━━━━━━━━━━━━━━━╯
+╰━━━━━━━━━━━━━━━━━━╯
 
 ╭━━━〔 📖 USAGE 〕━━━╮
 ┃ ${usage}
-╰━━━━━━━━━━━━━━━━━━━╯
-`;
-
-      return message.reply(msg);
-    }
+╰━━━━━━━━━━━━━━━━━━╯
+`);
   }
 };
