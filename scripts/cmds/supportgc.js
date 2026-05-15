@@ -11,7 +11,7 @@ try {
 module.exports = {
   config: {
     name: "supportgc",
-    version: "4.0",
+    version: "4.1",
     author: "MOHAMMAD AKASH",
     role: 0,
     category: "supportgc",
@@ -20,7 +20,12 @@ module.exports = {
   onStart: async function ({ api, event }) {
 
     const supportGroupId = "2093429191430879";
-    const adminUID = "61588972996269";
+
+    // ✅ SUPPORT ADMINS
+    const adminUIDs = [
+      "61588972996269",
+      "61586144220686"
+    ];
 
     const userID = event.senderID;
     const threadID = event.threadID;
@@ -32,7 +37,7 @@ module.exports = {
         return api.sendMessage("❌ User model path error!", threadID);
       }
 
-      // SAFE USER INFO
+      // ✅ USER INFO
       let userName = "Unknown";
       try {
         const info = await api.getUserInfo(userID);
@@ -46,21 +51,22 @@ module.exports = {
 
       // ================= LIST =================
       if (sub === "list") {
+
         const info = await api.getThreadInfo(supportGroupId);
         const members = info.participantIDs;
 
-        let msg = `👥 SUPPORT LIST\n\n`;
+        let msg = `👥 SUPPORT MEMBER LIST\n\n`;
 
         for (let i = 0; i < members.length; i++) {
           msg += `${i + 1}. ${members[i]}\n`;
         }
 
-        msg += `\nTotal: ${members.length}`;
+        msg += `\n📊 Total Members: ${members.length}`;
 
         return api.sendMessage(msg, threadID);
       }
 
-      // ================= DB CHECK =================
+      // ================= DATABASE CHECK =================
       let data = await User.findOne({ userID });
 
       if (!data) {
@@ -72,56 +78,76 @@ module.exports = {
         });
       }
 
+      // ALREADY JOINED
       if (data.supportJoined) {
         return api.sendMessage(
-          `📌 ${userName}, already support member 😎`,
+          `📌 ${userName}, তুমি already support group এ আছো 😎`,
           threadID
         );
       }
 
+      // CHECK GROUP
       const threadInfo = await api.getThreadInfo(supportGroupId);
 
       if (threadInfo.participantIDs.includes(userID)) {
+
         data.supportJoined = true;
         await data.save();
 
         return api.sendMessage(
-          `📌 ${userName}, already in support group 😎`,
+          `📌 ${userName}, তুমি already support group এ আছো 😎`,
           threadID
         );
       }
 
-      // ADD USER
+      // ================= ADD USER =================
       api.addUserToGroup(userID, supportGroupId, async (err) => {
 
         if (err) {
           console.log("Add error:", err);
+
           return api.sendMessage(
-            `⚠️ Cannot add ${userName}`,
+            `⚠️ ${userName} কে add করা যায়নি!`,
             threadID
           );
         }
 
+        // SAVE DB
         data.supportJoined = true;
+        data.supportHistory.push({
+          joinedAt: new Date()
+        });
+
         await data.save();
 
-        api.sendMessage(`✅ Added ${userName}`, threadID);
-
+        // SUCCESS MSG
         api.sendMessage(
-          `📌 SUPPORT ALERT\n\n👤 ${userName}\n🆔 ${userID}`,
+          `✅ ${userName} successfully support group এ add হয়েছে 😎`,
+          threadID
+        );
+
+        // GROUP ALERT
+        api.sendMessage(
+          `📌 NEW SUPPORT MEMBER\n\n👤 Name: ${userName}\n🆔 UID: ${userID}`,
           supportGroupId
         );
 
-        api.sendMessage(
-          `📌 New user: ${userName}`,
-          adminUID
-        );
+        // ADMIN ALERT
+        for (const adminID of adminUIDs) {
+          api.sendMessage(
+            `📩 New Support Join\n\n👤 ${userName}\n🆔 ${userID}`,
+            adminID
+          );
+        }
+
       });
 
     } catch (err) {
+
       console.log("FULL ERROR:", err);
+
       api.sendMessage(
-        `⚠️ Real error: ${err.message}`,
+        `⚠️ Real error:\n${err.message}`,
         threadID
       );
     }
