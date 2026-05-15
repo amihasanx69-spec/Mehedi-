@@ -4,8 +4,8 @@ module.exports = {
 	config: {
 		name: "notification",
 		aliases: ["notify", "noti"],
-		version: "2.1",
-		author: "Asraful Islam",
+		version: "3.0",
+		author: "Asraful Islam + ChatGPT Fix",
 		countDown: 5,
 		role: 2,
 		description: {
@@ -16,14 +16,14 @@ module.exports = {
 			en: "{pn} <message>\nReply photo/video/audio to send attachment"
 		},
 		envConfig: {
-			delayPerGroup: 500
+			delayPerGroup: 1000
 		}
 	},
 
 	langs: {
 		en: {
-			missingMessage: "⚠ Please enter a message or reply to media",
-			notification: "📢 NOTIFICATION আজরাইল ",
+			missingMessage: "⚠️ Please enter a message or reply to media",
+			notification: "📢 NOTIFICATION",
 			sendingNotification: "⏳ Sending notification to %1 groups...",
 			sentNotification: "✅ Successfully sent to %1 groups",
 			errorSendingNotification: "❌ Failed to send to %1 groups"
@@ -41,23 +41,34 @@ module.exports = {
 		getLang
 	}) {
 
-		const { delayPerGroup } = envCommands[commandName];
+		try {
 
-		if (!args[0] && !event.messageReply)
-			return message.reply(getLang("missingMessage"));
+			const { delayPerGroup } = envCommands[commandName];
 
-		// Collect attachments
-		const attachments = [
-			...event.attachments,
-			...(event.messageReply?.attachments || [])
-		].filter(item =>
-			["photo", "png", "animated_image", "video", "audio"].includes(item.type)
-		);
+			if (!args[0] && !event.messageReply)
+				return message.reply(getLang("missingMessage"));
 
-		// All group list
-		const allThreadID = (await threadsData.getAll())
-			.filter(thread =>
+			// Get valid attachments
+			const attachments = [];
+
+			if (event.attachments?.length > 0) {
+				attachments.push(...event.attachments);
+			}
+
+			if (event.messageReply?.attachments?.length > 0) {
+				attachments.push(...event.messageReply.attachments);
+			}
+
+			const validAttachments = attachments.filter(item =>
+				["photo", "animated_image", "video", "audio"].includes(item.type)
+			);
+
+			// Get all groups
+			const allThreads = await threadsData.getAll();
+
+			const groupList = allThreads.filter(thread =>
 				thread.isGroup &&
+				Array.isArray(thread.members) &&
 				thread.members.some(
 					member =>
 						member.userID == api.getCurrentUserID() &&
@@ -65,19 +76,22 @@ module.exports = {
 				)
 			);
 
-		message.reply(
-			getLang("sendingNotification", allThreadID.length)
-		);
+			if (groupList.length === 0) {
+				return message.reply("❌ No group found");
+			}
 
-		let success = 0;
-		let failed = [];
+			await message.reply(
+				getLang("sendingNotification", groupList.length)
+			);
 
-		for (const thread of allThreadID) {
-			try {
+			let success = 0;
+			const failed = [];
 
-				// IMPORTANT: regenerate stream every loop
-				const formSend = {
-					body:
+			for (const thread of groupList) {
+				try {
+
+					const formSend = {
+						body:
 `${getLang("notification")}
 ━━━━━━━━━━━━━━━━━━
 
@@ -85,42 +99,60 @@ ${args.join(" ") || "No message"}
 
 ━━━━━━━━━━━━━━━━━━
 🤖 Owner: Hasan`
-				};
+					};
 
-				// Add attachment if exists
-				if (attachments.length > 0) {
-					formSend.attachment =
-						await getStreamsFromAttachment(attachments);
+					// FIX attachment stream
+					if (validAttachments.length > 0) {
+						try {
+							formSend.attachment =
+								await getStreamsFromAttachment(validAttachments);
+						}
+						catch (e) {
+							console.log("Attachment Error:", e);
+						}
+					}
+
+					await api.sendMessage(
+						formSend,
+						thread.threadID
+					);
+
+					success++;
+
+				}
+				catch (err) {
+					console.log(
+						`Failed Group ${thread.threadID}:`,
+						err.message
+					);
+
+					failed.push(thread.threadID);
 				}
 
-				await api.sendMessage(
-					formSend,
-					thread.threadID
-				);
-
-				success++;
-
+				// Delay to avoid spam block
 				await new Promise(resolve =>
 					setTimeout(resolve, delayPerGroup)
 				);
-
 			}
-			catch (err) {
-				console.log(err);
-				failed.push(thread.threadID);
-			}
-		}
 
-		let finalMsg =
+			let finalMsg =
 `📡 Notification Complete
 
-✅ Success: ${success}
+✅ Sent: ${success}
 ❌ Failed: ${failed.length}`;
 
-		if (failed.length > 0) {
-			finalMsg += `\n\nFailed Groups:\n${failed.join("\n")}`;
-		}
+			if (failed.length > 0) {
+				finalMsg += `\n\n❌ Failed IDs:\n${failed.join("\n")}`;
+			}
 
-		message.reply(finalMsg);
+			return message.reply(finalMsg);
+
+		}
+		catch (error) {
+			console.log(error);
+			return message.reply(
+				"❌ Notification command crashed:\n" + error.message
+			);
+		}
 	}
 };
