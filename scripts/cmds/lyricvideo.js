@@ -12,7 +12,7 @@ async function fetchVideos(query) {
   }
 }
 
-// clean title
+// 🎶 Clean Song Title
 function cleanTitle(text = "") {
   return text
     .replace(/\(.*?\)/g, "")
@@ -26,39 +26,40 @@ module.exports = {
   config: {
     name: "lyricvideo",
     aliases: ["lv"],
-    author: "Hasan",
-    version: "2.3-FIX",
+    author: "Hasan + ChatGPT",
+    version: "3.1",
     category: "fun",
     shortDescription: {
-      en: "Play Lyric Video (Auto Delete Wait Msg)"
+      en: "Play lyric video"
     }
   },
 
   onStart: async function ({ api, event, args }) {
 
-    const emojis = ["🎶","🎧","🔥","✨","💿","⚡","🖤"];
+    const reacts = ["🎶","🎧","⚡","✨","💿"];
 
-    // 🔥 Waiting message (store ID)
+    // ✨ Stylish Small Wait Msg
     const waitMsg = await api.sendMessage(
-`╭─🎶 LYRIC VIDEO
-│ 🔎 Searching song...
-│ ⏳ Please wait...
-╰──────────────`,
+`🎧 𝐋𝐲𝐫𝐢𝐜 𝐕𝐢𝐛𝐞𝐬...
+⚡ 𝐋𝐢𝐯𝐞 𝐋𝐨𝐚𝐝𝐢𝐧𝐠
+✨ 𝐉𝐮𝐬𝐭 𝐖𝐚𝐢𝐭`,
       event.threadID
     );
 
     api.setMessageReaction(
-      emojis[Math.floor(Math.random() * emojis.length)],
+      reacts[Math.floor(Math.random() * reacts.length)],
       event.messageID,
       () => {},
       true
     );
 
     try {
+
       let query = "";
 
-      // 🎧 Reply system
+      // 🎵 Reply Audio/Video
       if (event.messageReply?.attachments?.length) {
+
         const att = event.messageReply.attachments[0];
 
         if (att.type === "audio" || att.type === "video") {
@@ -72,33 +73,43 @@ module.exports = {
           query = cleanTitle(res.data?.title || "");
 
         } else {
-          api.unsendMessage(waitMsg.messageID);
+
+          if (waitMsg?.messageID)
+            api.unsendMessage(waitMsg.messageID);
+
           return api.sendMessage(
-            "❌ Only reply to audio/video!",
+            "❌ Reply only to audio or video.",
             event.threadID,
             event.messageID
           );
         }
       }
 
-      // 🎧 text search
+      // 🔎 Search by text
       else if (args.length) {
         query = args.join(" ");
       }
 
       else {
-        api.unsendMessage(waitMsg.messageID);
+
+        if (waitMsg?.messageID)
+          api.unsendMessage(waitMsg.messageID);
+
         return api.sendMessage(
-          "⚠️ Give a song name or reply to audio/video!",
+          "⚠️ Enter song name or reply to audio/video.",
           event.threadID,
           event.messageID
         );
       }
 
+      // ❌ Empty Query
       if (!query) {
-        api.unsendMessage(waitMsg.messageID);
+
+        if (waitMsg?.messageID)
+          api.unsendMessage(waitMsg.messageID);
+
         return api.sendMessage(
-          "❌ Song not detected!",
+          "❌ Song not detected.",
           event.threadID,
           event.messageID
         );
@@ -108,10 +119,14 @@ module.exports = {
 
       const videos = await fetchVideos(finalQuery);
 
+      // ❌ No Results
       if (!videos || !videos.length) {
-        api.unsendMessage(waitMsg.messageID);
+
+        if (waitMsg?.messageID)
+          api.unsendMessage(waitMsg.messageID);
+
         return api.sendMessage(
-          "❌ No lyric video found!",
+          "❌ No lyric video found.",
           event.threadID,
           event.messageID
         );
@@ -119,28 +134,34 @@ module.exports = {
 
       const video = videos[0];
 
+      // ❌ Invalid URL
       if (!video?.videoUrl) {
-        api.unsendMessage(waitMsg.messageID);
+
+        if (waitMsg?.messageID)
+          api.unsendMessage(waitMsg.messageID);
+
         return api.sendMessage(
-          "❌ Video not found!",
+          "❌ Video URL missing.",
           event.threadID,
           event.messageID
         );
       }
 
+      // 📥 Download Stream
       const stream = await getStreamFromURL(video.videoUrl);
 
-      // 🔥 DELETE WAITING MESSAGE BEFORE SENDING VIDEO
-      api.unsendMessage(waitMsg.messageID);
+      // 🗑️ Remove Wait Msg
+      if (waitMsg?.messageID)
+        api.unsendMessage(waitMsg.messageID);
 
+      // 🎶 Final Send
       return api.sendMessage(
         {
           body:
-`╔══ 🎶 LYRIC VIDEO 🎶 ══╗
-┃ 🎧 Song: ${query}
-┃ ✨ Enjoy Music
-┃ 👑 Powered by Hasan
-╚════════════════════╝`,
+`🎶 𝐋𝐘𝐑𝐈𝐂 𝐕𝐈𝐃𝐄𝐎
+
+🎧 ${query}
+✨ Enjoy Your Music`,
           attachment: stream
         },
         event.threadID,
@@ -148,12 +169,14 @@ module.exports = {
       );
 
     } catch (err) {
+
       console.log(err);
 
-      api.unsendMessage(waitMsg.messageID);
+      if (waitMsg?.messageID)
+        api.unsendMessage(waitMsg.messageID);
 
       return api.sendMessage(
-        "❌ Error fetching lyric video!",
+        "❌ Error fetching lyric video.",
         event.threadID,
         event.messageID
       );
